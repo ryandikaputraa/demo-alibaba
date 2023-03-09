@@ -1,47 +1,42 @@
-provider "alicloud"{
-  access_key = "LTAI5tNEpdwiPGzpvMjjaGue"
-  secret_key = "8jjdoZX35ChNHHTXRT7G02KNO4tEQA"
-  region     = "ap-southeast-5"
-}
+provider "alicloud" {}
 
-# Create a VPC
 resource "alicloud_vpc" "vpc" {
-  vpc_name    = "vpc-terraform"
-  cidr_block  = "172.16.0.0/16"
+  name       = "vpc-terraform"
+  cidr_block = "172.16.0.0/12"
 }
 
-resource "alicloud_vswitch" "vswitch" {
+resource "alicloud_vswitch" "vsw" {
   vpc_id            = alicloud_vpc.vpc.id
-  cidr_block        = "172.16.0.0/24"
-  zone_id           = "ap-southeast-5a"
-  vswitch_name      = "vswitch-a"
+  cidr_block        = "172.16.0.0/21"
+  zone_id = "ap-southeast-5a"
 }
 
-resource "alicloud_security_group" "group" {
-  name        = "sg-terraform"
-  description = "terraform"
-  vpc_id      = alicloud_vpc.vpc.id
+resource "alicloud_security_group" "default" {
+  name = "default"
+  vpc_id = alicloud_vpc.vpc.id
 }
 
 resource "alicloud_instance" "instance" {
-  #indonesia
-  #availability_zone   = "ap-southeast-5"
-  security_groups      = alicloud_security_group.group.*.id
+  # cn-beijing
+  # availability_zone = "ap-southeast-5"
+  security_groups = alicloud_security_group.default. *.id
+  # series III
   instance_type        = "ecs.t6-c1m1.large"
   system_disk_category = "cloud_efficiency"
-  image_id             = "ubuntu_20_04_x64_20G_alibase_20220215.vhd"
-  instance_name        = "ecs-from-terraform"
-  vswitch_id           = alicloud_vswitch.vswitch.id
-  password             = "P@ssw0rd123#"
+  image_id             = "ubuntu_18_04_64_20G_alibase_20190624.vhd"
+  instance_name        = "ecs-terraform"
+  vswitch_id = alicloud_vswitch.vsw.id
+  internet_max_bandwidth_out = 10
   instance_charge_type = "PostPaid"
 }
 
-resource "alicloud_db_instance" "rds" {
-  engine               = "MySQL"
-  engine_version       = "5.7"
-  instance_type        = "mysql.n1.micro.1"
-  instance_storage     = "20"
-  instance_charge_type = "Postpaid"
-  instance_name        = "rds-from-terraform"
-  vswitch_id           = alicloud_vswitch.vswitch.id
+resource "alicloud_security_group_rule" "allow_all_tcp" {
+  type              = "ingress"
+  ip_protocol       = "tcp"
+  nic_type          = "intranet"
+  policy            = "accept"
+  port_range        = "1/65535"
+  priority          = 1
+  security_group_id = alicloud_security_group.default.id
+  cidr_ip           = "0.0.0.0/0"
 }
